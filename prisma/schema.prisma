@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String        @id @default(uuid())
+  email       String        @unique
+  name        String
+  hash        String
+  memberships Membership[]
+  createdAt   DateTime      @default(now())
+}
+
+model Organization {
+  id          String        @id @default(uuid())
+  name        String
+  teams       Team[]
+  roles       Role[]
+  memberships Membership[]
+  createdAt   DateTime      @default(now())
+}
+
+model Team {
+  id             String        @id @default(uuid())
+  name           String
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  memberships    Membership[]
+}
+
+model Role {
+  id             String             @id @default(uuid())
+  name           String
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id])
+
+  permissions    RolePermission[]
+  inheritedBy    RoleInheritance[] @relation("InheritedBy")
+  inheritsFrom   RoleInheritance[] @relation("InheritsFrom")
+
+  Membership     Membership[]
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  id           String       @id @default(uuid())
+  roleId       String
+  permissionId String
+  role         Role         @relation(fields: [roleId], references: [id])
+  permission   Permission   @relation(fields: [permissionId], references: [id])
+}
+
+model RoleInheritance {
+  id         String @id @default(uuid())
+  
+  // The child role (that inherits)
+  fromRoleId String
+  fromRole   Role   @relation("InheritsFrom", fields: [fromRoleId], references: [id])
+
+  // The parent role (that is inherited from)
+  toRoleId   String
+  toRole     Role   @relation("InheritedBy", fields: [toRoleId], references: [id])
+}
+
+model Membership {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  teamId         String?
+  team           Team?         @relation(fields: [teamId], references: [id])
+  roleId         String
+  role           Role          @relation(fields: [roleId], references: [id])
+}
